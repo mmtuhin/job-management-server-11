@@ -1,24 +1,21 @@
 const express = require("express");
 const app = express();
-const cors = require('cors')
+const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-require('dotenv').config();
+require("dotenv").config();
 const port = 5000;
-
-
 
 //MiddleWare
 
 //parser
-app.use(express.json())
+app.use(express.json());
 app.use(cors());
 
 //tuhinhossaindev
 //I5fNK9cGGZMxr53J
 
 //DB URI
-const uri =
-  `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.1fkl4oh.mongodb.net/?retryWrites=true&w=majority`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.1fkl4oh.mongodb.net/?retryWrites=true&w=majority`;
 
 //MongoDB Connection
 const client = new MongoClient(uri, {
@@ -38,8 +35,11 @@ async function run() {
     const jobCategoryCollection = client
       .db("applicruit_db")
       .collection("job-categories");
-    
-    const jobCollection = client.db("applicruit_db").collection("jobs")
+
+    const jobCollection = client.db("applicruit_db").collection("jobs");
+    const appliedJobsCollection = client
+      .db("applicruit_db")
+      .collection("applied_jobs");
 
     //get job categories (Part-time, remote...)
     app.get("/api/v1/job_categories", async (req, res) => {
@@ -50,27 +50,59 @@ async function run() {
     });
 
     //create A job
-    app.post('/api/v1/user/add_job', async(req, res) => {
-        // console.log(JSON.parse(req.body.jobCategory));
-        const job = req.body
-        console.log(job);
-        const result = await jobCollection.insertOne(job)
-        res.send(result)
-    })
+    app.post("/api/v1/user/add_job", async (req, res) => {
+      // console.log(JSON.parse(req.body.jobCategory));
+      const job = req.body;
+      console.log(job);
+      const result = await jobCollection.insertOne(job);
+      res.send(result);
+    });
     //find a job
-    app.get('/jobdetails/:id', async(req, res) => {
-      const id = req.params.id
+    app.get("/jobdetails/:id", async (req, res) => {
+      const id = req.params.id;
       console.log(id);
-      const query = { _id: new ObjectId(id)}
-      const result  = await jobCollection.findOne(query)
-      res.send(result)
-    })
+      const query = { _id: new ObjectId(id) };
+      const result = await jobCollection.findOne(query);
+      res.send(result);
+    });
 
     //Find All jobs
-    app.get('/api/v1/jobs', async(req, res) => {
+    app.get("/api/v1/jobs", async (req, res) => {
       const cursor = jobCollection.find();
       const result = await cursor.toArray();
       res.send(result);
+    });
+
+    //find Logged in user posted jobs
+    app.get('/myjobs/:email', async (req, res) => {
+      const email = req.params.email;
+      console.log(email);
+      const query = {postUserEmail: email}
+      const cursor =  jobCollection.find(query)
+      const result = await cursor.toArray()
+      res.send(result)
+    })
+
+    //Add to applied jobs
+    app.post("/appliedjobs", async (req, res) => {
+      const appliedJob = req.body; 
+      //console.log(appliedJob);
+      const {jobId} = appliedJob
+      
+       const filter = {_id: new ObjectId(jobId)} //Filter for specific id of job db.
+      const incApplicants = await jobCollection.updateOne(filter, {$inc: {applicantsNumber: 1}})
+      console.log(incApplicants);
+      const result = await appliedJobsCollection.insertOne(appliedJob)
+      res.send(result);
+    });
+
+    //get all the applied jobs
+    app.get('/appliedjobs/:loggeduseremail', async(req, res) =>{
+      const logged_user_email = req.params.loggeduseremail
+      const query = {applicantEmail: logged_user_email}
+      const cursor = appliedJobsCollection.find(query)
+      const result= await cursor.toArray();
+      res.send(result)
     })
 
     // Send a ping to confirm a successful connection
