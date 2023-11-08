@@ -66,6 +66,44 @@ async function run() {
       res.send(result);
     });
 
+    //Update A job
+    app.put('/jobs/:id' , async(req, res) => {
+      const id = req.params.id
+      const filter = {_id: new ObjectId(id)}
+      const options = { upsert: true}
+      const updatedjob = req.body
+      console.log(updatedjob);
+      const job = {
+        $set:{
+          jobCategory: updatedjob.jobCategory,
+          bannerUrl: updatedjob.bannerUrl,
+          postDate: updatedjob.postDate,
+          salary: updatedjob.salary,
+          submitDeadline: updatedjob.submitDeadline,
+          companyImgUrl: updatedjob.companyImgUrl,
+          companyName: updatedjob.companyName,
+          jobLocation: updatedjob.jobLocation,
+          description: updatedjob.description,
+          jobTitle: updatedjob.jobTitle,
+          applicantsNumber: updatedjob.applicantsNumber,
+          postUserName: updatedjob.postUserName,
+          postUserEmail: updatedjob.postUserEmail,
+        }
+      }
+      const result = await jobCollection.updateOne(filter, job, options)
+      res.send(result)
+    })
+
+
+    //delete a job from myJobs
+    app.delete('/api/v1/jobs/:id', async(req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const query = {_id:new ObjectId(id)};
+      const result = await jobCollection.deleteOne(query)
+      res.send(result)
+    })
+
     //Find All jobs
     app.get("/api/v1/jobs", async (req, res) => {
       const cursor = jobCollection.find();
