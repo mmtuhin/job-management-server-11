@@ -1,15 +1,22 @@
 const express = require("express");
 const app = express();
-const cors = require("cors");
+const jwt = require('jsonwebtoken');
+const cors = require('cors');
+const cookieParser = require('cookie-parser')
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
-const port = 5000;
+const port = process.env.PORT || 5000;
+
 
 //MiddleWare
 
 //parser
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://applicruit.web.app/'],
+  credentials: true,
+}));
+app.use(cookieParser())
 
 //tuhinhossaindev
 //I5fNK9cGGZMxr53J
@@ -40,6 +47,28 @@ async function run() {
     const appliedJobsCollection = client
       .db("applicruit_db")
       .collection("applied_jobs");
+
+    //Auth Type API
+
+    //Create Token and send cookie to browser
+    app.post('/jwt', async(req, res) => {
+      const user = req.body;
+      console.log("User for token", user);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET,{expiresIn: '1h'})
+
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+      })
+      .send({token})
+    })
+    // clear cookie 
+    app.post('/logout', async(req, res) => {
+      const user = req.body;
+      console.log("Logging Out..", user);
+      res.clearCookie('token', {maxAge: 0 ,sameSite: 'none', secure:true}).send({success: true})
+    })
 
     //get job categories (Part-time, remote...)
     app.get("/api/v1/job_categories", async (req, res) => {
@@ -156,7 +185,7 @@ async function run() {
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
-  res.send("Hello World!");
+  res.send("Applicruit server is running.");
 });
 
 app.listen(port, () => {
