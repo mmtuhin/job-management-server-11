@@ -13,7 +13,7 @@ const port = process.env.PORT || 5000;
 //parser
 app.use(express.json());
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://applicruit.web.app/'],
+  origin: ['http://localhost:5173', 'https://applicruit.web.app'],
   credentials: true,
 }));
 app.use(cookieParser())
@@ -51,24 +51,6 @@ async function run() {
     //Auth Type API
 
     //Create Token and send cookie to browser
-    app.post('/jwt', async(req, res) => {
-      const user = req.body;
-      console.log("User for token", user);
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET,{expiresIn: '1h'})
-
-      res.cookie('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-      })
-      .send({token})
-    })
-    // clear cookie 
-    app.post('/logout', async(req, res) => {
-      const user = req.body;
-      console.log("Logging Out..", user);
-      res.clearCookie('token', {maxAge: 0 ,sameSite: 'none', secure:true}).send({success: true})
-    })
 
     //get job categories (Part-time, remote...)
     app.get("/api/v1/job_categories", async (req, res) => {
