@@ -33,6 +33,22 @@ const client = new MongoClient(uri, {
   },
 });
 
+const verifyToken = (req, res, next) => {
+  const token = req?.cookies?.token;
+  // console.log('token in middleware', token);
+  if(!token){
+    return res.status(401).send({message: 'Unauthorized Access'})
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if(err){
+      return res.status(401).send({message: 'Unauthorized Access'})
+    }
+    req.user = decoded;
+    next();
+  } )
+  // next()
+}
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -59,6 +75,13 @@ async function run() {
         sameSite: 'none',
         maxAge: 60 * 60 * 1000
       }).send({success : true})
+    })
+
+    //Clear cookie after logout
+    app.post('/logout', async(req, res) => {
+      const user = req.body;
+      console.log(user);
+      res.clearCookie('token',{maxAge: 0, secure: true, sameSite: 'none'}).send({success: true})
     })
 
     //Create Token and send cookie to browser
@@ -134,9 +157,13 @@ async function run() {
     });
 
     //find Logged in user posted jobs
-    app.get('/myjobs/:email', async (req, res) => {
+    app.get('/myjobs/:email',verifyToken, async (req, res) => {
       const email = req.params.email;
-      console.log(email);
+      // console.log(email);
+      console.log('Token Owner', req.user);
+      if(req.user.email !== email){
+        return res.status(403).send({message: 'forbidden access'})
+      }
       const query = {postUserEmail: email}
       const cursor =  jobCollection.find(query)
       const result = await cursor.toArray()
@@ -157,8 +184,12 @@ async function run() {
     });
 
     //get all the applied jobs
-    app.get('/appliedjobs/:loggeduseremail', async(req, res) =>{
+    app.get('/appliedjobs/:loggeduseremail',verifyToken, async(req, res) =>{
       const logged_user_email = req.params.loggeduseremail
+      console.log(req.user.email);
+      if(req.user.email !== logged_user_email){
+        return res.status(403).send({message: 'forbidden access'})
+      }
       const query = {applicantEmail: logged_user_email}
       const cursor = appliedJobsCollection.find(query)
       const result= await cursor.toArray();
